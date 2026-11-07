@@ -1,1 +1,177 @@
+index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OnlineWatch</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #10151b;
+  color: white;
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+main { max-width: 500px; margin: auto; }
+h1 { color: #36d69a; }
+.card {
+  background: #1d2731;
+  padding: 18px;
+  border-radius: 15px;
+  margin: 15px 0;
+}
+input, select {
+  width: 100%;
+  padding: 14px;
+  margin: 8px 0;
+  border: 0;
+  border-radius: 9px;
+  background: #303c48;
+  color: white;
+}
+button {
+  padding: 13px;
+  border: 0;
+  border-radius: 9px;
+  margin: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.start { background: #36d69a; }
+.stop { background: #f17b7b; }
+.entry {
+  padding: 12px 0;
+  border-bottom: 1px solid #39434c;
+}
+</style>
+</head>
+<body>
+<main>
+<h1>● OnlineWatch</h1>
+<p>Activity Dashboard</p>
 
+<div class="card">
+<h3>Add Profile</h3>
+<input id="person" placeholder="Enter profile name">
+<button onclick="addProfile()">Add Profile</button>
+<select id="profiles" onchange="showProfile()">
+<option value="">Select Profile</option>
+</select>
+</div>
+
+<div class="card">
+<h3>Activity Status</h3>
+<h2 id="status">Offline</h2>
+<p id="duration">No active session</p>
+<button class="start" onclick="start()">Start Online</button>
+<button class="stop" onclick="stop()">Go Offline</button>
+</div>
+
+<div class="card">
+<h3>Activity History</h3>
+<div id="history">No activity yet.</div>
+</div>
+</main>
+
+<script>
+let data = JSON.parse(localStorage.getItem("owdata") || "{}");
+let selected = "";
+
+function save() {
+  localStorage.setItem("owdata", JSON.stringify(data));
+}
+
+function addProfile() {
+  let name = document.getElementById("person").value.trim();
+  if (!name) return alert("Enter a name");
+  if (data[name]) return alert("Profile already exists");
+
+  data[name] = { sessions: [], active: null };
+  save();
+
+  let option = document.createElement("option");
+  option.value = name;
+  option.textContent = name;
+  document.getElementById("profiles").appendChild(option);
+  document.getElementById("profiles").value = name;
+  document.getElementById("person").value = "";
+  showProfile();
+}
+
+function showProfile() {
+  selected = document.getElementById("profiles").value;
+  render();
+}
+
+function start() {
+  if (!selected) return alert("Select a profile first");
+  if (data[selected].active) return alert("Already online");
+
+  data[selected].active = new Date().toISOString();
+  save();
+  render();
+}
+
+function stop() {
+  if (!selected) return alert("Select a profile first");
+
+  let profile = data[selected];
+  if (!profile.active) return alert("Already offline");
+
+  profile.sessions.unshift({
+    start: profile.active,
+    end: new Date().toISOString()
+  });
+
+  profile.active = null;
+  save();
+  render();
+}
+
+function render() {
+  if (!selected) return;
+
+  let profile = data[selected];
+  document.getElementById("status").textContent =
+    profile.active ? "Online" : "Offline";
+
+  document.getElementById("duration").textContent =
+    profile.active
+      ? "Started " + new Date(profile.active).toLocaleString()
+      : "No active session";
+
+  let history = document.getElementById("history");
+  history.innerHTML = "";
+
+  profile.sessions.forEach(session => {
+    let minutes = Math.round(
+      (new Date(session.end) - new Date(session.start)) / 60000
+    );
+
+    let entry = document.createElement("div");
+    entry.className = "entry";
+    entry.textContent =
+      new Date(session.start).toLocaleString() +
+      " — " +
+      new Date(session.end).toLocaleString() +
+      " | " + minutes + " minutes";
+
+    history.appendChild(entry);
+  });
+
+  if (!profile.sessions.length) {
+    history.textContent = "No completed sessions.";
+  }
+}
+
+Object.keys(data).forEach(name => {
+  let option = document.createElement("option");
+  option.value = name;
+  option.textContent = name;
+  document.getElementById("profiles").appendChild(option);
+});
+</script>
+</body>
+</html>
